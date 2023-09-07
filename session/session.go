@@ -2,16 +2,19 @@ package session
 
 import (
 	"fmt"
+	"github.com/KPGhat/ShellSession/cmd"
 	"io"
 	"log"
 	"net"
 	"sync"
+	"time"
 )
 
 // Session结构体
 type Session struct {
 	Conn      net.Conn
 	isAlive   bool
+	Buffer    []byte
 	readLock  *sync.Mutex
 	writeLock *sync.Mutex
 	//Buffer []byte
@@ -31,23 +34,40 @@ func (session *Session) Send(data []byte) {
 }
 
 // Read data from session
-func (session *Session) Read() []byte {
+func (session *Session) Read(data []byte) int {
 	session.readLock.Lock()
 	defer session.readLock.Unlock()
 
-	// fixme maybe have len bug
-	data := make([]byte, 0x100)
 	readLen, err := session.Conn.Read(data)
 	if err != nil {
 		log.Printf("[-]Read data to sessioin error: %v\n", err)
 		session.isAlive = false
-		return nil
+		return 0
 	}
 
-	if readLen == 0 {
-		return nil
+	return readLen
+}
+
+func (session *Session) ReadListener(running *bool, callback func([]byte)) {
+	for *running {
+		session.Conn.SetReadDeadline(time.Time{})
+		// fixme maybe have len bug
+		data := make([]byte, 0x100)
+		n := session.Read(data)
+
+		if n > 0 {
+			callback(data[:n])
+		}
 	}
-	return data
+}
+
+func (session *Session) SessionInfo() string {
+	remoteAddr := session.Conn.RemoteAddr().String()
+	isAlive := "true"
+	if !session.isAlive {
+		isAlive = "false"
+	}
+	return fmt.Sprintf("host: %s\talive: %s", remoteAddr, isAlive)
 }
 
 // Session Manager
@@ -72,12 +92,16 @@ func (sm *SessionManager) GetSession(id int) *Session {
 
 // ADD a Session
 func (sm *SessionManager) AddSession(conn net.Conn) {
-	sm.sessions = append(sm.sessions, &Session{
+	newSession := &Session{
 		Conn:      conn,
 		isAlive:   true,
 		readLock:  &sync.Mutex{},
 		writeLock: &sync.Mutex{},
-	})
+	}
+	sessLen := len(sm.sessions)
+	sm.sessions = append(sm.sessions, newSession)
+
+	log.Println(fmt.Sprintf("[+]Add Session %d:\t", sessLen) + newSession.SessionInfo())
 }
 
 func (sm *SessionManager) ListAllSession(output io.Writer) {
@@ -86,18 +110,31 @@ func (sm *SessionManager) ListAllSession(output io.Writer) {
 		return
 	}
 	for i, session := range sm.sessions {
-		remoteAddr := session.Conn.RemoteAddr().String()
-		isAlive := "true"
-		if !session.isAlive {
-			isAlive = "false"
-		}
-		sessionInfo := fmt.Sprintf("id:%d\thost:%s\talive:%s\n", i, remoteAddr, isAlive)
+		sessionInfo := fmt.Sprintf("id: %d\t", i) + session.SessionInfo()
 		_, err := output.Write([]byte(sessionInfo))
 		if err != nil {
 			log.Printf("[-]Session list: %v\n", err)
 			return
 		}
 	}
+}
+
+func (sm *SessionManager) ExecCmdForAll(command string, output io.Writer) {
+	limiter := make(chan struct{}, cmd.Config.MaxConn/2+1)
+	wg := sync.WaitGroup{}
+	for _, session := range sm.sessions {
+		limiter <- struct{}{}
+		wg.Add(1)
+
+		// TODO add get result and store the result
+		go func(sess *Session) {
+			sess.Send([]byte(command + "\n"))
+			<-limiter
+			wg.Done()
+		}(session)
+	}
+
+	wg.Wait()
 }
 
 func (sm *SessionManager) DestroySessionManager() {

@@ -26,6 +26,8 @@ func dispatch(cmd string) cliType {
 			sessionManager.ListAllSession(os.Stdout)
 		case "-i":
 			handleInteract(cmdSplit)
+		case "-a":
+			handleForAllSession(cmdSplit)
 		}
 		return SESSION
 	} else if cmdSplit[0] == "exit" {
@@ -49,6 +51,11 @@ func handleInteract(cmd []string) {
 	}
 
 	sess := session.GetSessionManager().GetSession(sessionid)
-	interact(sess, os.Stdout)
+	interact(sess, os.Stdin, os.Stdout)
 
+}
+
+func handleForAllSession(command []string) {
+	execCmd := strings.Join(command[2:], " ")
+	session.GetSessionManager().ExecCmdForAll(execCmd, os.Stdout)
 }
