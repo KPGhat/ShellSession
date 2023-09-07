@@ -2,28 +2,25 @@ package session
 
 import (
 	"fmt"
+	"github.com/KPGhat/ShellSession/cmd"
 	"log"
 	"net"
 )
 
 func handleSession(conn net.Conn) {
-	//TODO
+	sessionManager := GetSessionManager()
+	sessionManager.AddSession(conn)
 }
 
-func StarServer(host string, port int, max int) error {
-	address := fmt.Sprintf("%s:%d", host, port)
+func StarServer() {
+	address := fmt.Sprintf("%s:%d", cmd.Config.Host, cmd.Config.Port)
 	shellListener, err := net.Listen("tcp", address)
 	if err != nil {
-		return err
+		log.Fatalf("%v", err)
 	}
-	defer func(shellListener net.Listener) {
-		err = shellListener.Close()
-		if err != nil {
-			log.Fatalf("%v", err)
-		}
-	}(shellListener)
+	defer StopServer(shellListener)
 
-	sem := make(chan struct{}, max)
+	sem := make(chan struct{}, cmd.Config.MaxConn)
 	for {
 		conn, _ := shellListener.Accept()
 
@@ -33,5 +30,13 @@ func StarServer(host string, port int, max int) error {
 			<-sem
 		}()
 	}
+}
 
+func StopServer(listener net.Listener) {
+	err := listener.Close()
+	if err != nil {
+		log.Fatalf("%v", err)
+	}
+	sessionManager := GetSessionManager()
+	sessionManager.DestroySessionManager()
 }
