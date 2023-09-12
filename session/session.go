@@ -1,11 +1,12 @@
 package session
 
 import (
+	"bytes"
 	"fmt"
-	"github.com/KPGhat/ShellSession/cmd"
-	"io"
+	"github.com/KPGhat/ShellSession/utils"
 	"log"
 	"net"
+	"strings"
 	"sync"
 	"time"
 )
@@ -34,31 +35,82 @@ func (session *Session) Send(data []byte) {
 }
 
 // Read data from session
-func (session *Session) Read(data []byte) int {
+func (session *Session) Read(data []byte) (int, error) {
 	session.readLock.Lock()
 	defer session.readLock.Unlock()
 
 	readLen, err := session.Conn.Read(data)
-	if err != nil {
-		log.Printf("[-]Read data to sessioin error: %v\n", err)
-		session.isAlive = false
-		return 0
-	}
+	return readLen, err
+}
 
-	return readLen
+func (session *Session) ReadUntil(suffix []byte) ([]byte, bool) {
+	buffer := make([]byte, 1)
+	var isTimeout bool
+	var data bytes.Buffer
+
+	for {
+		session.Conn.SetReadDeadline(time.Now().Add(time.Second))
+		n, err := session.Read(buffer)
+
+		if err != nil {
+			if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+				log.Printf("[-]Read data timeout: %v\n", err)
+				isTimeout = true
+			} else {
+				session.isAlive = false
+				isTimeout = false
+			}
+			break
+		}
+		data.Write(buffer[:n])
+
+		if bytes.HasSuffix(data.Bytes(), suffix) {
+			break
+		}
+	}
+	session.Conn.SetReadDeadline(time.Time{})
+	return data.Bytes(), isTimeout
 }
 
 func (session *Session) ReadListener(running *bool, callback func([]byte)) {
 	for *running {
 		session.Conn.SetReadDeadline(time.Time{})
 		// fixme maybe have len bug
-		data := make([]byte, 0x100)
-		n := session.Read(data)
+		data := make([]byte, 1024)
+		n, err := session.Read(data)
+		if err != nil {
+			log.Printf("[-]Read data to session error: %v\n", err)
+			session.isAlive = false
+		}
 
 		if n > 0 {
 			callback(data[:n])
 		}
 	}
+}
+
+func (session *Session) ExecCmd(command []byte) []byte {
+	prefix := utils.RandString(8)
+	suffix := utils.RandString(8)
+	newCommand := " echo " + prefix + " && " + string(command) + "; echo " + suffix + "\n"
+	session.Send([]byte(newCommand))
+
+	var execResult []byte
+
+	for execResult == nil || strings.EqualFold(" && "+string(command)+"; echo ", string(execResult)) {
+		_, isTimeout := session.ReadUntil([]byte(prefix))
+		if isTimeout {
+			return []byte{}
+		}
+
+		result, _ := session.ReadUntil([]byte(suffix))
+		var found bool
+		execResult, found = bytes.CutSuffix(result, []byte(suffix))
+		if !found {
+			return []byte{}
+		}
+	}
+	return bytes.TrimLeft(execResult, "\r\n ")
 }
 
 func (session *Session) SessionInfo() string {
@@ -68,80 +120,4 @@ func (session *Session) SessionInfo() string {
 		isAlive = "false"
 	}
 	return fmt.Sprintf("host: %s\talive: %s", remoteAddr, isAlive)
-}
-
-// Session Manager
-type SessionManager struct {
-	sessions []*Session
-}
-
-var globalSessionManager SessionManager
-
-func GetSessionManager() *SessionManager {
-	return &globalSessionManager
-}
-
-// GET a Session
-func (sm *SessionManager) GetSession(id int) *Session {
-	if id < len(sm.sessions) {
-		return sm.sessions[id]
-	}
-
-	return nil
-}
-
-// ADD a Session
-func (sm *SessionManager) AddSession(conn net.Conn) {
-	newSession := &Session{
-		Conn:      conn,
-		isAlive:   true,
-		readLock:  &sync.Mutex{},
-		writeLock: &sync.Mutex{},
-	}
-	sessLen := len(sm.sessions)
-	sm.sessions = append(sm.sessions, newSession)
-
-	log.Println(fmt.Sprintf("[+]Add Session %d:\t", sessLen) + newSession.SessionInfo())
-}
-
-func (sm *SessionManager) ListAllSession(output io.Writer) {
-	if len(sm.sessions) == 0 {
-		output.Write([]byte("[-]No session established\n"))
-		return
-	}
-	for i, session := range sm.sessions {
-		sessionInfo := fmt.Sprintf("id: %d\t", i) + session.SessionInfo()
-		_, err := output.Write([]byte(sessionInfo))
-		if err != nil {
-			log.Printf("[-]Session list: %v\n", err)
-			return
-		}
-	}
-}
-
-func (sm *SessionManager) ExecCmdForAll(command string, output io.Writer) {
-	limiter := make(chan struct{}, cmd.Config.MaxConn/2+1)
-	wg := sync.WaitGroup{}
-	for _, session := range sm.sessions {
-		limiter <- struct{}{}
-		wg.Add(1)
-
-		// TODO add get result and store the result
-		go func(sess *Session) {
-			sess.Send([]byte(command + "\n"))
-			<-limiter
-			wg.Done()
-		}(session)
-	}
-
-	wg.Wait()
-}
-
-func (sm *SessionManager) DestroySessionManager() {
-	for _, session := range sm.sessions {
-		err := session.Conn.Close()
-		if err != nil {
-			log.Fatalf("%v", err)
-		}
-	}
 }
