@@ -5,7 +5,6 @@ import (
 	"github.com/KPGhat/ShellSession/cmd"
 	"log"
 	"net"
-	"time"
 )
 
 func handleSession(conn net.Conn) {
@@ -20,13 +19,6 @@ func StarServer() {
 		log.Fatalf("%v", err)
 	}
 	defer StopServer(shellListener)
-
-	go func() {
-		for {
-			time.Sleep(5 * time.Second)
-			GetSessionManager().KeepAliveConn()
-		}
-	}()
 
 	sem := make(chan struct{}, cmd.Config.MaxConn)
 	for {

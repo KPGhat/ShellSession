@@ -26,7 +26,7 @@ func dispatch(cmd string) cliType {
 	if cmdSplit[0] == "session" {
 		switch cmdSplit[1] {
 		case "-l":
-			sessionManager.ListAllSession(os.Stdout)
+			sessionManager.ListAllSession(os.Stdout, true)
 		case "-i":
 			handleInteract(cmdSplit)
 		case "-m":

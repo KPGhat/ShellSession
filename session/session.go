@@ -80,6 +80,7 @@ func (session *Session) ReadListener(running *bool, callback func([]byte)) {
 		n, err := session.Read(data)
 		if err != nil {
 			log.Printf("[-]Read data to session error: %v\n", err)
+			*running = false
 			session.isAlive = false
 		}
 

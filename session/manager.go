@@ -14,15 +14,18 @@ import (
 
 // Session Manager
 type SessionManager struct {
-	sessions []*Session
+	sessions map[int]*Session
 	context  map[int]struct{}
+	lastID   int
 	mu       sync.Mutex
 }
 
 var globalSessionManager SessionManager
 
 func init() {
+	globalSessionManager.sessions = make(map[int]*Session)
 	globalSessionManager.context = make(map[int]struct{})
+	globalSessionManager.lastID = 0
 }
 
 func GetSessionManager() *SessionManager {
@@ -31,8 +34,8 @@ func GetSessionManager() *SessionManager {
 
 // GET a Session
 func (sm *SessionManager) GetSession(id int) *Session {
-	if id < len(sm.sessions) {
-		return sm.sessions[id]
+	if session, err := sm.sessions[id]; !err {
+		return session
 	}
 
 	return nil
@@ -46,18 +49,23 @@ func (sm *SessionManager) AddSession(conn net.Conn) {
 		readLock:  &sync.Mutex{},
 		writeLock: &sync.Mutex{},
 	}
-	sessLen := len(sm.sessions)
-	sm.sessions = append(sm.sessions, newSession)
-
-	log.Println(fmt.Sprintf("[+]Add Session %d:\t", sessLen) + newSession.SessionInfo())
+	sm.mu.Lock()
+	defer sm.mu.Unlock()
+	sm.sessions[sm.lastID] = newSession
+	log.Println(fmt.Sprintf("[+]Add Session %d:\t", sm.lastID) + newSession.SessionInfo())
+	sm.lastID++
 }
 
-func (sm *SessionManager) ListAllSession(output io.Writer) {
+func (sm *SessionManager) ListAllSession(output io.Writer, onlyAlive bool) {
 	if len(sm.sessions) == 0 {
 		output.Write([]byte("[-]No session established\n"))
 		return
 	}
 	for i, session := range sm.sessions {
+		if onlyAlive && !session.isAlive {
+			continue
+		}
+
 		sessionInfo := fmt.Sprintf("id: %d\t", i) + session.SessionInfo()
 		_, err := output.Write([]byte(sessionInfo + "\n"))
 		if err != nil {
@@ -75,23 +83,6 @@ func (sm *SessionManager) AddContext(id int) error {
 	sm.context[id] = struct{}{}
 	sm.mu.Unlock()
 	return nil
-}
-
-func (sm *SessionManager) KeepAliveConn() {
-	backup := make([]*Session, len(sm.sessions))
-	copy(backup, sm.sessions)
-	var aliveHost []*Session
-	for _, session := range backup {
-		if session.isAlive {
-			aliveHost = append(aliveHost, session)
-		}
-	}
-
-	if len(backup) == len(aliveHost) {
-		return
-	}
-	sm.sessions = make([]*Session, len(aliveHost))
-	copy(sm.sessions, aliveHost)
 }
 
 func (sm *SessionManager) AddAllContext() {

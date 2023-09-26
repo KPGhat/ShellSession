@@ -25,6 +25,6 @@ func interact(session *session.Session, input io.Reader, output io.Writer) {
 			isInteract = false
 			break
 		}
-		session.Send([]byte(command + "\n"))
+		session.Send([]byte(" " + command + "\n"))
 	}
 }

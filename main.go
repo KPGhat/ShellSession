@@ -10,6 +10,7 @@ import (
 
 func main() {
 	cmd.Flag()
+	cmd.PrintConfig()
 
 	// Capture Ctrl-C Signal
 	signalChan := make(chan os.Signal, 1)
