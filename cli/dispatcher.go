@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"github.com/KPGhat/ShellSession/cmd"
 	"github.com/KPGhat/ShellSession/session"
 	"github.com/KPGhat/ShellSession/utils"
 	"os"
@@ -14,6 +15,7 @@ type cliType int
 const (
 	SESSION cliType = iota
 	CONTEXT
+	LOG
 	EXIT
 	NOTEXIST
 )
@@ -22,7 +24,7 @@ func dispatch(cmd string) cliType {
 	cmd = strings.TrimSpace(cmd)
 	cmdSplit := strings.Split(cmd, " ")
 	sessionManager := session.GetManager()
-	if cmdSplit[0] == "session" || cmdSplit[0] == "sess" {
+	if cmdSplit[0] == "session" || cmdSplit[0] == "s" {
 		switch cmdSplit[1] {
 		case "-l":
 			if len(cmdSplit) == 3 && cmdSplit[2] == "all" {
@@ -36,7 +38,7 @@ func dispatch(cmd string) cliType {
 			handleForAllSession(cmdSplit)
 		}
 		return SESSION
-	} else if cmdSplit[0] == "context" || cmdSplit[0] == "ctx" {
+	} else if cmdSplit[0] == "context" || cmdSplit[0] == "c" {
 		switch cmdSplit[1] {
 		case "-c":
 			contextID := session.GetManager().CreateContext()
@@ -47,6 +49,9 @@ func dispatch(cmd string) cliType {
 			session.GetManager().ListAllContext(os.Stdout)
 		}
 		return CONTEXT
+	} else if cmdSplit[0] == "log" {
+		handleLog(cmdSplit)
+		return LOG
 	} else if cmdSplit[0] == "exit" {
 		utils.Congrats(fmt.Sprintf("Exiting program"))
 		return EXIT
@@ -75,6 +80,20 @@ func handleInteract(cmd []string) {
 func handleForAllSession(command []string) {
 	execCmd := strings.Join(command[2:], " ")
 	session.GetManager().ExecCmdForAll(execCmd, os.Stdout)
+}
+
+func handleLog(cmdSplit []string) {
+	if len(cmdSplit) < 2 {
+		utils.Warning("Missing log arg")
+		return
+	}
+
+	switch cmdSplit[1] {
+	case "on":
+		cmd.Config.LogOff = false
+	case "off":
+		cmd.Config.LogOff = true
+	}
 }
 
 func dispatchContext(cmdSplit []string) {

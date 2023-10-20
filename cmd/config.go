@@ -2,16 +2,18 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/KPGhat/ShellSession/utils"
+	"github.com/fatih/color"
 )
 
 type config struct {
-	Host string
-	Port int
+	Host   string
+	Port   int
+	LogOff bool
 }
 
 var Config config
 
 func PrintConfig() {
-	utils.Congrats(fmt.Sprintf("Listening at %s:%d", Config.Host, Config.Port))
+	green := color.New(color.FgHiGreen).SprintFunc()
+	fmt.Printf("%sListening at %s:%d\n", green("[+]"), Config.Host, Config.Port)
 }

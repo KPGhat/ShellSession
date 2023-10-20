@@ -2,15 +2,20 @@ package utils
 
 import (
 	"fmt"
+	"github.com/KPGhat/ShellSession/cmd"
 	"github.com/fatih/color"
 )
 
 func Congrats(message string) {
-	green := color.New(color.FgHiGreen).SprintFunc()
-	fmt.Println(green("[+]") + message)
+	if !cmd.Config.LogOff {
+		green := color.New(color.FgHiGreen).SprintFunc()
+		fmt.Println(green("[+]") + message)
+	}
 }
 
 func Warning(message string) {
-	red := color.New(color.FgHiRed).SprintFunc()
-	fmt.Println(red("[-]") + message)
+	if !cmd.Config.LogOff {
+		red := color.New(color.FgHiRed).SprintFunc()
+		fmt.Println(red("[-]") + message)
+	}
 }
