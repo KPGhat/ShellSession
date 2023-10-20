@@ -6,6 +6,8 @@
 gsh -port 2333
 ```
 
+### Basic session manage
+
 ```shell
 # list all connection
 session -l
@@ -13,18 +15,32 @@ session -l
 # interact with a session
 session -i [id]
 
-# manager the session
-session -m
-
-# manage command
-  add [id, all]
-  del [id, all]
-  sh [cmd]
-  exit
-
 # execute command for all session
 session -a [cmd]
 ```
+
+### Context manage
+
+```shell
+# Create Context
+context -c
+
+# List All Context
+context -l
+
+# Enter The Context By id
+context -i [id]
+```
+
+```shell
+# manage command
+add [id, all]
+del [id, all]
+list
+sh [cmd]
+exit
+```
+
 
 ## Task List
 

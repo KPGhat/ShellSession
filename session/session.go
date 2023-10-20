@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/KPGhat/ShellSession/utils"
-	"log"
 	"net"
 	"strings"
 	"sync"
@@ -28,7 +27,7 @@ func (session *Session) Send(data []byte) {
 
 	_, err := session.Conn.Write(data)
 	if err != nil {
-		log.Printf("[-]Send data to sessioin error: %v\n", err)
+		utils.Warning(fmt.Sprintf("Send data to sessioin error: %v", err))
 		session.isAlive = false
 		return
 	}
@@ -54,7 +53,7 @@ func (session *Session) ReadUntil(suffix []byte) ([]byte, bool) {
 
 		if err != nil {
 			if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
-				log.Printf("[-]Read data timeout: %v\n", err)
+				utils.Warning(fmt.Sprintf("Read data timeout: %v", err))
 				isTimeout = true
 			} else {
 				session.isAlive = false
@@ -79,7 +78,7 @@ func (session *Session) ReadListener(running *bool, callback func([]byte)) {
 		data := make([]byte, 1024)
 		n, err := session.Read(data)
 		if err != nil {
-			log.Printf("[-]Read data to session error: %v\n", err)
+			utils.Warning(fmt.Sprintf("Read data to session error: %v", err))
 			*running = false
 			session.isAlive = false
 		}

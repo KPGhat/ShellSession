@@ -1,40 +1,39 @@
 package session
 
 import (
-	"errors"
 	"fmt"
-	"github.com/KPGhat/ShellSession/cmd"
+	"github.com/KPGhat/ShellSession/utils"
+	"github.com/fatih/color"
 	"io"
 	"log"
 	"net"
-	"strconv"
-	"strings"
 	"sync"
 )
 
-// Session Manager
-type SessionManager struct {
-	sessions map[int]*Session
-	context  map[int]struct{}
-	lastID   int
-	mu       sync.Mutex
+type Manager struct {
+	sessionManager map[int]*Session
+	contextManager map[int]*Context
+	lastSessionID  int
+	lastContextID  int
+	mu             sync.Mutex
 }
 
-var globalSessionManager SessionManager
+var globalManager Manager
 
 func init() {
-	globalSessionManager.sessions = make(map[int]*Session)
-	globalSessionManager.context = make(map[int]struct{})
-	globalSessionManager.lastID = 0
+	globalManager.sessionManager = make(map[int]*Session)
+	globalManager.contextManager = make(map[int]*Context)
+	globalManager.lastSessionID = -1
+	globalManager.lastContextID = -1
 }
 
-func GetSessionManager() *SessionManager {
-	return &globalSessionManager
+func GetManager() *Manager {
+	return &globalManager
 }
 
 // GET a Session
-func (sm *SessionManager) GetSession(id int) *Session {
-	if session, err := sm.sessions[id]; !err {
+func (manager *Manager) GetSession(id int) *Session {
+	if session, ok := manager.sessionManager[id]; ok {
 		return session
 	}
 
@@ -42,26 +41,27 @@ func (sm *SessionManager) GetSession(id int) *Session {
 }
 
 // ADD a Session
-func (sm *SessionManager) AddSession(conn net.Conn) {
+func (manager *Manager) AddSession(conn net.Conn) {
 	newSession := &Session{
 		Conn:      conn,
 		isAlive:   true,
 		readLock:  &sync.Mutex{},
 		writeLock: &sync.Mutex{},
 	}
-	sm.mu.Lock()
-	defer sm.mu.Unlock()
-	sm.sessions[sm.lastID] = newSession
-	log.Println(fmt.Sprintf("[+]Add Session %d:\t", sm.lastID) + newSession.SessionInfo())
-	sm.lastID++
+	manager.mu.Lock()
+	defer manager.mu.Unlock()
+	manager.lastSessionID++
+	manager.sessionManager[manager.lastSessionID] = newSession
+	utils.Congrats(fmt.Sprintf("Add Session %d:\t", manager.lastSessionID) + newSession.SessionInfo())
 }
 
-func (sm *SessionManager) ListAllSession(output io.Writer, onlyAlive bool) {
-	if len(sm.sessions) == 0 {
-		output.Write([]byte("[-]No session established\n"))
+func (manager *Manager) ListAllSession(output io.Writer, onlyAlive bool) {
+	if len(manager.sessionManager) == 0 {
+		red := color.New(color.FgHiRed).SprintfFunc()
+		output.Write([]byte(red("[-]No session established\n")))
 		return
 	}
-	for i, session := range sm.sessions {
+	for i, session := range manager.sessionManager {
 		if onlyAlive && !session.isAlive {
 			continue
 		}
@@ -69,65 +69,16 @@ func (sm *SessionManager) ListAllSession(output io.Writer, onlyAlive bool) {
 		sessionInfo := fmt.Sprintf("id: %d\t", i) + session.SessionInfo()
 		_, err := output.Write([]byte(sessionInfo + "\n"))
 		if err != nil {
-			log.Printf("[-]Session list: %v\n", err)
+			utils.Warning(fmt.Sprintf("Session list: %v", err))
 			return
 		}
 	}
 }
 
-func (sm *SessionManager) AddContext(id int) error {
-	if _, ok := sm.context[id]; ok || id >= len(sm.sessions) {
-		return errors.New(fmt.Sprintf("[-]Session Manage Context <%d> has already added or not exist\n", id))
-	}
-	sm.mu.Lock()
-	sm.context[id] = struct{}{}
-	sm.mu.Unlock()
-	return nil
-}
-
-func (sm *SessionManager) AddAllContext() {
-	id := 0
-	for GetSessionManager().AddContext(id) == nil {
-		id++
-	}
-}
-
-func (sm *SessionManager) DelContext(id int) error {
-	if _, ok := sm.context[id]; !ok {
-		return errors.New(fmt.Sprintf("[-]Session Manage Context <%d> not exist\n", id))
-	}
-	sm.mu.Lock()
-	delete(sm.context, id)
-	sm.mu.Unlock()
-	return nil
-}
-
-func (sm *SessionManager) DelAllContext() {
-	for id, _ := range sm.context {
-		sm.mu.Lock()
-		delete(sm.context, id)
-		sm.mu.Unlock()
-	}
-}
-
-func (sm *SessionManager) GetAllContext() string {
-	var result []string
-	for id, _ := range sm.context {
-		result = append(result, strconv.Itoa(id))
-	}
-	return strings.Join(result, ",")
-}
-
-func (sm *SessionManager) HandleAllContext(callback func(session *Session)) {
-	for id, _ := range sm.context {
-		callback(sm.GetSession(id))
-	}
-}
-
-func (sm *SessionManager) ExecCmdForAll(command string, output io.Writer) {
-	limiter := make(chan struct{}, cmd.Config.MaxConn/2+1)
+func (manager *Manager) ExecCmdForAll(command string, output io.Writer) {
+	limiter := make(chan struct{}, 100)
 	wg := sync.WaitGroup{}
-	for _, session := range sm.sessions {
+	for _, session := range manager.sessionManager {
 		limiter <- struct{}{}
 		wg.Add(1)
 
@@ -143,11 +94,46 @@ func (sm *SessionManager) ExecCmdForAll(command string, output io.Writer) {
 	wg.Wait()
 }
 
-func (sm *SessionManager) DestroySessionManager() {
-	for _, session := range sm.sessions {
+func (manager *Manager) DestroySessionManager() {
+	for _, session := range manager.sessionManager {
 		err := session.Conn.Close()
 		if err != nil {
 			log.Fatalf("%v", err)
 		}
 	}
+}
+
+func (manager *Manager) CreateContext() int {
+	manager.mu.Lock()
+	defer manager.mu.Unlock()
+	manager.lastContextID++
+	manager.contextManager[manager.lastContextID] = InitContext()
+
+	return manager.lastContextID
+}
+
+func (manager *Manager) ListAllContext(output io.Writer) {
+	if len(manager.sessionManager) == 0 {
+		red := color.New(color.FgHiRed).SprintfFunc()
+		output.Write([]byte(red("[-]No context created\n")))
+		return
+	}
+	for i, context := range manager.contextManager {
+		contextInfo := fmt.Sprintf("id: %d\t", i) + context.ContextInfo()
+		_, err := output.Write([]byte(contextInfo + "\n"))
+		if err != nil {
+			utils.Warning(fmt.Sprintf("Context list: %v", err))
+			return
+		}
+	}
+}
+
+func (manager *Manager) GetContext(id int) *Context {
+	manager.mu.Lock()
+	defer manager.mu.Unlock()
+	if context, ok := manager.contextManager[id]; ok {
+		return context
+	}
+
+	return nil
 }

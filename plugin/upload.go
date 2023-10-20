@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"github.com/KPGhat/ShellSession/session"
+	"github.com/KPGhat/ShellSession/utils"
 	"log"
 	"os"
 	"path"
@@ -33,5 +34,6 @@ func (plugin *commandPlugin) Upload(session *session.Session, args []string) str
 }
 
 func (plugin *commandPlugin) UploadHelp() {
-	fmt.Println("[+]Upload Usage: upload src [dst]\n[+]If dst is not set, will upload to the shell current dir")
+	utils.Congrats("Upload Usage: upload src [dst]")
+	utils.Congrats("If dst is not set, will upload to the shell current dir")
 }

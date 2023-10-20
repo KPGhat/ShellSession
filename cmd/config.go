@@ -1,15 +1,17 @@
 package cmd
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/KPGhat/ShellSession/utils"
+)
 
 type config struct {
-	Host    string
-	Port    int
-	MaxConn int
+	Host string
+	Port int
 }
 
 var Config config
 
 func PrintConfig() {
-	fmt.Printf("[+]Listening at %s:%d and the maximum number of connections is %d\n", Config.Host, Config.Port, Config.MaxConn)
+	utils.Congrats(fmt.Sprintf("Listening at %s:%d", Config.Host, Config.Port))
 }

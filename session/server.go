@@ -8,7 +8,7 @@ import (
 )
 
 func handleSession(conn net.Conn) {
-	sessionManager := GetSessionManager()
+	sessionManager := GetManager()
 	sessionManager.AddSession(conn)
 }
 
@@ -20,7 +20,7 @@ func StarServer() {
 	}
 	defer StopServer(shellListener)
 
-	sem := make(chan struct{}, cmd.Config.MaxConn)
+	sem := make(chan struct{}, 100)
 	for {
 		conn, _ := shellListener.Accept()
 
@@ -37,6 +37,6 @@ func StopServer(listener net.Listener) {
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
-	sessionManager := GetSessionManager()
+	sessionManager := GetManager()
 	sessionManager.DestroySessionManager()
 }
