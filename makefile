@@ -15,18 +15,18 @@ all: build
 build: app
 
 app:
-    @$(foreach n, $(os-archs),\
-        os=$(shell echo "$(n)" | cut -d : -f 1);\
-        arch=$(shell echo "$(n)" | cut -d : -f 2);\
-        gomips=$(shell echo "$(n)" | cut -d : -f 3);\
-        target_suffix=$${os}_$${arch};\
-        echo "Build $${os}-$${arch}...";\
-        env CGO_ENABLED=0 GOOS=$${os} GOARCH=$${arch} GOMIPS=$${gomips} go build -trimpath -ldflags "$(LDFLAGS)" -o ./build/${BINARY}_$${target_suffix} ;\
-        echo "Build $${os}-$${arch} done";\
-    )
-    @mv ./build/${BINARY}_windows_386 ./build/${BINARY}_windows_386.exe
-    @mv ./build/${BINARY}_windows_amd64 ./build/${BINARY}_windows_amd64.exe
-    @mv ./build/${BINARY}_windows_arm64 ./build/${BINARY}_windows_arm64.exe
+	@$(foreach n, $(os-archs),\
+		os=$(shell echo "$(n)" | cut -d : -f 1);\
+		arch=$(shell echo "$(n)" | cut -d : -f 2);\
+		gomips=$(shell echo "$(n)" | cut -d : -f 3);\
+		target_suffix=$${os}_$${arch};\
+		echo "Build $${os}-$${arch}...";\
+		env CGO_ENABLED=0 GOOS=$${os} GOARCH=$${arch} GOMIPS=$${gomips} go build -trimpath -ldflags "$(LDFLAGS)" -o ./build/${BINARY}_$${target_suffix} ;\
+		echo "Build $${os}-$${arch} done";\
+	)
+	@mv ./build/${BINARY}_windows_386 ./build/${BINARY}_windows_386.exe
+	@mv ./build/${BINARY}_windows_amd64 ./build/${BINARY}_windows_amd64.exe
+	@mv ./build/${BINARY}_windows_arm64 ./build/${BINARY}_windows_arm64.exe
 
 clean:
-    rm -rf ./build/
+	rm -rf ./build/
