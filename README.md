@@ -41,6 +41,21 @@ sh [cmd]
 exit
 ```
 
+### Log manage
+
+```shell
+# open/close log info
+log on
+log off
+```
+
+### Clear not alive session
+
+```shell
+# execute the echo command to check alive
+# if result is error, delete the session
+clear
+```
 
 ## Task List
 
