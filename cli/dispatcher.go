@@ -82,7 +82,7 @@ func handleContext(args []string) {
 		contextID := session.GetManager().CreateContext()
 		enterContext(contextID)
 	case "-i":
-		dispatchContext(args[2:])
+		dispatchContext(args[1:])
 	case "-l":
 		session.GetManager().ListAllContext(os.Stdout)
 	}
@@ -126,8 +126,10 @@ func handleLog(args []string) {
 	switch args[0] {
 	case "on":
 		cmd.Config.LogOff = false
+		utils.Congrats("Log ON")
 	case "off":
 		cmd.Config.LogOff = true
+		utils.Congrats("Log OFF")
 	}
 }
 
