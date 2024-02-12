@@ -14,7 +14,7 @@ import (
 	"github.com/KPGhat/ShellSession/session"
 )
 
-func handleContext(id int) error {
+func enterContext(id int) error {
 	context := session.GetManager().GetContext(id)
 	if context == nil {
 		return errors.New("No such context")

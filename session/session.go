@@ -14,7 +14,7 @@ import (
 type Session struct {
 	Conn      net.Conn
 	isAlive   bool
-	Buffer    []byte
+	Id        int
 	readLock  *sync.Mutex
 	writeLock *sync.Mutex
 	//Buffer []byte

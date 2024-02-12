@@ -2,8 +2,10 @@ package cli
 
 import (
 	"bufio"
+	"github.com/KPGhat/ShellSession/utils"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/fatih/color"
 )
@@ -22,9 +24,19 @@ func CliControl() {
 
 		reader := bufio.NewReader(os.Stdin)
 		cmd, _ := reader.ReadString('\n')
-		cmdType := dispatch(cmd)
-		if cmdType == EXIT {
+		cmd = strings.Trim(cmd, "\r\x20\n")
+
+		if cmd == "" {
+			continue
+		}
+		cmdSplit := strings.Split(cmd, " ")
+		cmdType := dispatch(cmdSplit)
+
+		switch cmdType {
+		case EXIT:
 			running = false
+		case NOTEXIST:
+			utils.Warning("gsh: " + cmdSplit[0] + ": no such command")
 		}
 	}
 

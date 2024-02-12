@@ -52,7 +52,22 @@ func (manager *Manager) AddSession(conn net.Conn) {
 	defer manager.mu.Unlock()
 	manager.lastSessionID++
 	manager.sessionManager[manager.lastSessionID] = newSession
+	newSession.Id = manager.lastSessionID
 	utils.Congrats(fmt.Sprintf("Add Session %d:\t", manager.lastSessionID) + newSession.SessionInfo())
+}
+
+func (manager *Manager) DelSession(id int) {
+	session := manager.GetSession(id)
+	if session == nil {
+		return
+	}
+	err := session.Conn.Close()
+	if err != nil {
+		log.Fatalf("%v", err)
+	}
+	manager.mu.Lock()
+	delete(manager.sessionManager, id)
+	defer manager.mu.Unlock()
 }
 
 func (manager *Manager) ListAllSession(output io.Writer, onlyAlive bool) {
@@ -76,16 +91,22 @@ func (manager *Manager) ListAllSession(output io.Writer, onlyAlive bool) {
 }
 
 func (manager *Manager) ExecCmdForAll(command string, output io.Writer) {
+	// TODO add get result and store the result
+	manager.HandleAllSession(func(sess *Session) {
+		result := sess.ExecCmd([]byte(command))
+		output.Write(result)
+	})
+}
+
+func (manager *Manager) HandleAllSession(callback func(*Session)) {
 	limiter := make(chan struct{}, 100)
 	wg := sync.WaitGroup{}
 	for _, session := range manager.sessionManager {
 		limiter <- struct{}{}
 		wg.Add(1)
 
-		// TODO add get result and store the result
 		go func(sess *Session) {
-			result := sess.ExecCmd([]byte(command))
-			output.Write(result)
+			callback(sess)
 			<-limiter
 			defer wg.Done()
 		}(session)
