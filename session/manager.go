@@ -44,7 +44,7 @@ func (manager *Manager) GetSession(id int) *Session {
 func (manager *Manager) AddSession(conn net.Conn) {
 	newSession := &Session{
 		Conn:      conn,
-		isAlive:   true,
+		IsAlive:   true,
 		readLock:  &sync.Mutex{},
 		writeLock: &sync.Mutex{},
 	}
@@ -77,7 +77,7 @@ func (manager *Manager) ListAllSession(output io.Writer, onlyAlive bool) {
 		return
 	}
 	for i, session := range manager.sessionManager {
-		if onlyAlive && !session.isAlive {
+		if onlyAlive && !session.IsAlive {
 			continue
 		}
 

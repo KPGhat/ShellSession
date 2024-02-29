@@ -89,15 +89,26 @@ func handleContext(args []string) {
 }
 
 func handleClear(args []string) {
-	session.GetManager().HandleAllSession(func(s *session.Session) {
-		randstr := utils.RandString(16)
-		result := string(s.ExecCmd([]byte("echo " + randstr)))
-		result = strings.Trim(result, "\n\r")
-		if !(result == randstr) {
-			session.GetManager().DelSession(s.Id)
-			utils.Congrats("clear closed session " + strconv.Itoa(s.Id))
-		}
-	})
+	switch args[0] {
+	case "-a":
+		session.GetManager().HandleAllSession(func(s *session.Session) {
+			randstr := utils.RandString(16)
+			result := string(s.ExecCmd([]byte("echo " + randstr)))
+			result = strings.Trim(result, "\n\r")
+			if !(result == randstr) {
+				session.GetManager().DelSession(s.Id)
+				utils.Congrats("Clear closed session <" + strconv.Itoa(s.Id) + ">")
+			}
+		})
+	default:
+		session.GetManager().HandleAllSession(func(s *session.Session) {
+			if !s.IsAlive {
+				session.GetManager().DelSession(s.Id)
+				utils.Congrats("Clear not alive session <" + strconv.Itoa(s.Id) + ">")
+			}
+		})
+	}
+
 }
 
 func handleInteract(args []string) {

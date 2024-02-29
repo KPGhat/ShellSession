@@ -52,9 +52,11 @@ log off
 ### Clear not alive session
 
 ```shell
+# clear not alive session
+clear
 # execute the echo command to check alive
 # if result is error, delete the session
-clear
+clear -a
 ```
 
 ## Task List

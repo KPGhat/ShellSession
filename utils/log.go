@@ -9,13 +9,13 @@ import (
 func Congrats(message string) {
 	if !cmd.Config.LogOff {
 		green := color.New(color.FgHiGreen).SprintFunc()
-		fmt.Println(green("[+]") + message)
+		fmt.Println("\r" + green("[+]") + message)
 	}
 }
 
 func Warning(message string) {
 	if !cmd.Config.LogOff {
 		red := color.New(color.FgHiRed).SprintFunc()
-		fmt.Println(red("[-]") + message)
+		fmt.Println("\r" + red("[-]") + message)
 	}
 }

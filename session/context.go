@@ -31,7 +31,7 @@ func (context *Context) AddContext(id int) error {
 
 func (context *Context) AddAllContext() {
 	for id, session := range GetManager().sessionManager {
-		if session.isAlive {
+		if session.IsAlive {
 			context.AddContext(id)
 		}
 	}

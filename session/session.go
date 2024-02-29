@@ -13,7 +13,7 @@ import (
 // Session结构体
 type Session struct {
 	Conn      net.Conn
-	isAlive   bool
+	IsAlive   bool
 	Id        int
 	readLock  *sync.Mutex
 	writeLock *sync.Mutex
@@ -28,9 +28,10 @@ func (session *Session) Send(data []byte) {
 	_, err := session.Conn.Write(data)
 	if err != nil {
 		utils.Warning(fmt.Sprintf("Send data to sessioin error: %v", err))
-		session.isAlive = false
+		session.IsAlive = false
 		return
 	}
+	session.IsAlive = true
 }
 
 // Read data from session
@@ -56,7 +57,7 @@ func (session *Session) ReadUntil(suffix []byte) ([]byte, bool) {
 				utils.Warning(fmt.Sprintf("Read data timeout: %v", err))
 				isTimeout = true
 			} else {
-				session.isAlive = false
+				session.IsAlive = false
 				isTimeout = false
 			}
 			break
@@ -80,7 +81,7 @@ func (session *Session) ReadListener(running *bool, callback func([]byte)) {
 		if err != nil {
 			utils.Warning(fmt.Sprintf("Read data to session error: %v", err))
 			*running = false
-			session.isAlive = false
+			session.IsAlive = false
 		}
 
 		if n > 0 {
@@ -116,7 +117,7 @@ func (session *Session) ExecCmd(command []byte) []byte {
 func (session *Session) SessionInfo() string {
 	remoteAddr := session.Conn.RemoteAddr().String()
 	isAlive := "true"
-	if !session.isAlive {
+	if !session.IsAlive {
 		isAlive = "false"
 	}
 	return fmt.Sprintf("host: %s\talive: %s", remoteAddr, isAlive)
