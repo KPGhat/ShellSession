@@ -57,6 +57,7 @@ func (manager *Manager) AddSession(conn net.Conn) {
 }
 
 func (manager *Manager) DelSession(id int) {
+	manager.mu.Lock()
 	session := manager.GetSession(id)
 	if session == nil {
 		return
@@ -65,7 +66,6 @@ func (manager *Manager) DelSession(id int) {
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
-	manager.mu.Lock()
 	delete(manager.sessionManager, id)
 	defer manager.mu.Unlock()
 }

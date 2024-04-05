@@ -43,7 +43,7 @@ func dispatch(cmdSplit []string) cliType {
 	}
 
 	if handleFunc, ok := cmdHandleMap[cmdSplit[0]]; ok {
-		handleFunc(cmdSplit[1:])
+		handleFunc(cmdSplit)
 		return HANDLEABLE
 	}
 
@@ -51,45 +51,45 @@ func dispatch(cmdSplit []string) cliType {
 }
 
 func handleSession(args []string) {
-	if len(args) < 1 {
+	if len(args) < 2 {
 		utils.Warning("Missing session args")
 		return
 	}
 	sessionManager := session.GetManager()
-	switch args[0] {
+	switch args[1] {
 	case "-l":
-		if len(args) == 2 && args[1] == "all" {
+		if len(args) == 3 && args[2] == "all" {
 			sessionManager.ListAllSession(os.Stdout, false)
 		} else {
 			sessionManager.ListAllSession(os.Stdout, true)
 		}
 	case "-i":
-		handleInteract(args[1:])
+		handleInteract(args[2:])
 	case "-a":
-		execCmd := strings.Join(args[1:], " ")
+		execCmd := strings.Join(args[2:], " ")
 		session.GetManager().ExecCmdForAll(execCmd, os.Stdout)
 	}
 }
 
 func handleContext(args []string) {
-	if len(args) < 1 {
+	if len(args) < 2 {
 		utils.Warning("Missing context args")
 		return
 	}
 
-	switch args[0] {
+	switch args[1] {
 	case "-c":
 		contextID := session.GetManager().CreateContext()
 		enterContext(contextID)
 	case "-i":
-		dispatchContext(args[1:])
+		dispatchContext(args[2:])
 	case "-l":
 		session.GetManager().ListAllContext(os.Stdout)
 	}
 }
 
 func handleClear(args []string) {
-	switch args[0] {
+	switch args[1] {
 	case "-a":
 		session.GetManager().HandleAllSession(func(s *session.Session) {
 			randstr := utils.RandString(16)
@@ -129,12 +129,12 @@ func handleInteract(args []string) {
 }
 
 func handleLog(args []string) {
-	if len(args) != 1 {
+	if len(args) != 2 {
 		utils.Warning("Missing log arg")
 		return
 	}
 
-	switch args[0] {
+	switch args[1] {
 	case "on":
 		cmd.Config.LogOff = false
 		utils.Congrats("Log ON")
