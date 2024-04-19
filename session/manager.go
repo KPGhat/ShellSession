@@ -45,6 +45,7 @@ func (manager *Manager) AddSession(conn net.Conn) {
 	newSession := &Session{
 		Conn:      conn,
 		IsAlive:   true,
+		IsEcho:    false,
 		readLock:  &sync.Mutex{},
 		writeLock: &sync.Mutex{},
 	}
@@ -53,10 +54,18 @@ func (manager *Manager) AddSession(conn net.Conn) {
 	manager.lastSessionID++
 	manager.sessionManager[manager.lastSessionID] = newSession
 	newSession.Id = manager.lastSessionID
+	echoToken := utils.RandString(16)
+	newSession.Send(" echo " + echoToken + "\n")
+	newSession.ReadUntil(echoToken)
+	_, nonexistent := newSession.ReadUntil(echoToken)
+	if !nonexistent {
+		newSession.IsEcho = true
+	}
 	utils.Congrats(fmt.Sprintf("Add Session %d:\t", manager.lastSessionID) + newSession.SessionInfo())
 }
 
 func (manager *Manager) DelSession(id int) {
+	manager.mu.Lock()
 	session := manager.GetSession(id)
 	if session == nil {
 		return
@@ -65,7 +74,6 @@ func (manager *Manager) DelSession(id int) {
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
-	manager.mu.Lock()
 	delete(manager.sessionManager, id)
 	defer manager.mu.Unlock()
 }
@@ -93,7 +101,7 @@ func (manager *Manager) ListAllSession(output io.Writer, onlyAlive bool) {
 func (manager *Manager) ExecCmdForAll(command string, output io.Writer) {
 	// TODO add get result and store the result
 	manager.HandleAllSession(func(sess *Session) {
-		result := sess.ExecCmd([]byte(command))
+		result := sess.ExecCmd(command)
 		output.Write(result)
 	})
 }
@@ -106,6 +114,11 @@ func (manager *Manager) HandleAllSession(callback func(*Session)) {
 		wg.Add(1)
 
 		go func(sess *Session) {
+			defer func() {
+				if r := recover(); r != nil {
+					utils.Warning(fmt.Sprintf("Panic: %v", r))
+				}
+			}()
 			callback(sess)
 			<-limiter
 			defer wg.Done()

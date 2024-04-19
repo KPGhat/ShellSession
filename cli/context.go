@@ -39,7 +39,7 @@ func enterContext(id int) error {
 				continue
 			}
 			context.HandleAllContext(func(session *session.Session) {
-				result := session.ExecCmd([]byte(strings.Join(cmdSplit[1:], " ")))
+				result := session.ExecCmd(strings.Join(cmdSplit[1:], " "))
 				os.Stdout.Write(result)
 			})
 		} else if cmdSplit[0] == "upload" {
@@ -65,14 +65,17 @@ func operateContext(context *session.Context, cmdSplit []string) {
 	var actionFunc func(id int) error
 	var actionForAll func()
 	if cmdSplit[0] == "add" {
-		actionFunc = context.AddContext
-		actionForAll = context.AddAllContext
+		actionFunc = context.Add
+		actionForAll = context.AddAll
+		if cmdSplit[1] == "allip" {
+			actionForAll = context.AddAllIP
+		}
 	} else if cmdSplit[0] == "del" {
-		actionFunc = context.DelContext
-		actionForAll = context.DelAllContext
+		actionFunc = context.Delete
+		actionForAll = context.DeleteAll
 	}
 
-	if cmdSplit[1] == "all" {
+	if strings.Contains(cmdSplit[1], "all") {
 		actionForAll()
 	} else {
 		for _, idStr := range cmdSplit[1:] {

@@ -25,9 +25,9 @@ func (plugin *commandPlugin) Upload(session *session.Session, args []string) str
 	// TODO Split the content into block
 	srcFileContentBase64 := base64.StdEncoding.EncodeToString(srcFileContent)
 	if len(args) == 1 {
-		result = session.ExecCmd([]byte("echo " + srcFileContentBase64 + "|base64 -d >" + path.Base(args[0])))
+		result = session.ExecCmd("echo " + srcFileContentBase64 + "|base64 -d >" + path.Base(args[0]))
 	} else {
-		result = session.ExecCmd([]byte("echo " + srcFileContentBase64 + "|base64 -d >" + args[1]))
+		result = session.ExecCmd("echo " + srcFileContentBase64 + "|base64 -d >" + args[1])
 	}
 
 	return string(result)

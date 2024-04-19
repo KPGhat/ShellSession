@@ -10,6 +10,9 @@ import (
 func interact(session *session.Session, input io.Reader, output io.Writer) {
 	isInteract := true
 	go session.ReadListener(&isInteract, func(data []byte) {
+		if !isInteract {
+			return
+		}
 		_, err := output.Write(data)
 		if err != nil {
 			isInteract = false
@@ -21,10 +24,10 @@ func interact(session *session.Session, input io.Reader, output io.Writer) {
 		inputReader := bufio.NewReader(input)
 		command, _ := inputReader.ReadString('\n')
 		command = strings.TrimSpace(command)
-		if command == "bg sh" {
+		if command == "bg sh" || command == "exit" {
 			isInteract = false
 			break
 		}
-		session.Send([]byte(" " + command + "\n"))
+		session.Send(" " + command + "\n")
 	}
 }

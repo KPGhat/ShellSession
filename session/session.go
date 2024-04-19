@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/KPGhat/ShellSession/utils"
 	"net"
-	"strings"
 	"sync"
 	"time"
 )
@@ -15,17 +14,18 @@ type Session struct {
 	Conn      net.Conn
 	IsAlive   bool
 	Id        int
+	IsEcho    bool
 	readLock  *sync.Mutex
 	writeLock *sync.Mutex
 	//Buffer []byte
 }
 
 // Send data to session
-func (session *Session) Send(data []byte) {
+func (session *Session) Send(data string) {
 	session.writeLock.Lock()
 	defer session.writeLock.Unlock()
 
-	_, err := session.Conn.Write(data)
+	_, err := session.Conn.Write([]byte(data))
 	if err != nil {
 		utils.Warning(fmt.Sprintf("Send data to sessioin error: %v", err))
 		session.IsAlive = false
@@ -43,7 +43,7 @@ func (session *Session) Read(data []byte) (int, error) {
 	return readLen, err
 }
 
-func (session *Session) ReadUntil(suffix []byte) ([]byte, bool) {
+func (session *Session) ReadUntil(suffix string) ([]byte, bool) {
 	buffer := make([]byte, 1)
 	var isTimeout bool
 	var data bytes.Buffer
@@ -54,7 +54,7 @@ func (session *Session) ReadUntil(suffix []byte) ([]byte, bool) {
 
 		if err != nil {
 			if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
-				utils.Warning(fmt.Sprintf("Read data timeout: %v", err))
+				//utils.Warning(fmt.Sprintf("Read data timeout: %v", err))
 				isTimeout = true
 			} else {
 				session.IsAlive = false
@@ -64,7 +64,7 @@ func (session *Session) ReadUntil(suffix []byte) ([]byte, bool) {
 		}
 		data.Write(buffer[:n])
 
-		if bytes.HasSuffix(data.Bytes(), suffix) {
+		if bytes.HasSuffix(data.Bytes(), []byte(suffix)) {
 			break
 		}
 	}
@@ -90,28 +90,28 @@ func (session *Session) ReadListener(running *bool, callback func([]byte)) {
 	}
 }
 
-func (session *Session) ExecCmd(command []byte) []byte {
+func (session *Session) ExecCmd(command string) []byte {
 	prefix := utils.RandString(8)
 	suffix := utils.RandString(8)
-	newCommand := " echo " + prefix + " && " + string(command) + "; echo " + suffix + "\n"
-	session.Send([]byte(newCommand))
+	newCommand := " echo " + prefix + " && " + command + "; echo " + suffix + "\n"
+	session.Send(newCommand)
 
-	var execResult []byte
+	result, isTimeOut := session.ReadUntil(suffix)
+	if isTimeOut {
+		return []byte{}
+	}
 
-	for execResult == nil || strings.EqualFold(" && "+string(command)+"; echo ", string(execResult)) {
-		_, isTimeout := session.ReadUntil([]byte(prefix))
-		if isTimeout {
-			return []byte{}
-		}
-
-		result, _ := session.ReadUntil([]byte(suffix))
-		var found bool
-		execResult, found = bytes.CutSuffix(result, []byte(suffix))
-		if !found {
-			return []byte{}
+	if session.IsEcho {
+		_, nonexistent := session.ReadUntil(prefix)
+		if !nonexistent {
+			result, _ = session.ReadUntil(suffix)
 		}
 	}
-	return bytes.TrimLeft(execResult, "\r\n ")
+
+	splitPrefix := bytes.Split(result, []byte(prefix))
+	result = splitPrefix[len(splitPrefix)-1]
+	result = bytes.Split(result, []byte(suffix))[0]
+	return bytes.TrimLeft(result, "\r\n")
 }
 
 func (session *Session) SessionInfo() string {

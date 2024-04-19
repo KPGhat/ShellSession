@@ -12,6 +12,7 @@ import (
 
 func CliControl() {
 	running := true
+	exitStatue := false
 	defer func() {
 		if err := recover(); err != nil {
 			log.Println("Panic: ", err)
@@ -34,7 +35,13 @@ func CliControl() {
 
 		switch cmdType {
 		case EXIT:
-			running = false
+			// enter twice to exit
+			if exitStatue {
+				running = false
+			} else {
+				exitStatue = true
+				utils.Congrats("Please enter exit again")
+			}
 		case NOTEXIST:
 			utils.Warning("gsh: " + cmdSplit[0] + ": no such command")
 		}

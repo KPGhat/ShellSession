@@ -38,7 +38,7 @@ func dispatch(cmdSplit []string) cliType {
 	} else if cmdSplit[0] == "ctx" || cmdSplit[0] == "c" {
 		cmdSplit[0] = "context"
 	} else if cmdSplit[0] == "exit" {
-		utils.Congrats(fmt.Sprintf("Exiting program"))
+		utils.Congrats("Exiting program")
 		return EXIT
 	}
 
@@ -89,11 +89,15 @@ func handleContext(args []string) {
 }
 
 func handleClear(args []string) {
-	switch args[0] {
+	option := "default"
+	if len(args) >= 1 {
+		option = args[0]
+	}
+	switch option {
 	case "-a":
 		session.GetManager().HandleAllSession(func(s *session.Session) {
 			randstr := utils.RandString(16)
-			result := string(s.ExecCmd([]byte("echo " + randstr)))
+			result := string(s.ExecCmd("echo " + randstr))
 			result = strings.Trim(result, "\n\r")
 			if !(result == randstr) {
 				session.GetManager().DelSession(s.Id)
