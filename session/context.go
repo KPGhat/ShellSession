@@ -26,6 +26,8 @@ func (context *Context) Add(id int) error {
 		return errors.New(fmt.Sprintf("Session <%d> has already added or not exist\n", id))
 	}
 	context.mu.Lock()
+	ip := strings.Split(GetManager().GetSession(id).Conn.RemoteAddr().String(), ":")[0]
+	context.ipMap[ip] = struct{}{}
 	context.context[id] = struct{}{}
 	context.mu.Unlock()
 	return nil
@@ -44,7 +46,6 @@ func (context *Context) AddAllIP() {
 	for id, session := range GetManager().sessionManager {
 		ip = strings.Split(session.Conn.RemoteAddr().String(), ":")[0]
 		if _, ok := context.ipMap[ip]; !ok && session.IsAlive {
-			context.ipMap[ip] = struct{}{}
 			context.Add(id)
 		}
 	}
@@ -57,6 +58,8 @@ func (context *Context) Delete(id int) error {
 		return errors.New(fmt.Sprintf("Session Manage Context <%d> not exist\n", id))
 	}
 
+	ip := strings.Split(GetManager().GetSession(id).Conn.RemoteAddr().String(), ":")[0]
+	delete(context.ipMap, ip)
 	delete(context.context, id)
 	return nil
 }
