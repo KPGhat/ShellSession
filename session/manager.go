@@ -6,6 +6,7 @@ import (
 	"github.com/fatih/color"
 	"io"
 	"log"
+	"maps"
 	"net"
 	"sync"
 )
@@ -72,7 +73,8 @@ func (manager *Manager) DelSession(id int) {
 	}
 	err := session.Conn.Close()
 	if err != nil {
-		log.Fatalf("%v", err)
+		//log.Fatalf("%v", err)
+		utils.Error(fmt.Sprintf("Close session %d error: %v", id, err))
 	}
 	delete(manager.sessionManager, id)
 	defer manager.mu.Unlock()
@@ -92,7 +94,7 @@ func (manager *Manager) ListAllSession(output io.Writer, onlyAlive bool) {
 		sessionInfo := fmt.Sprintf("id: %d\t", i) + session.SessionInfo()
 		_, err := output.Write([]byte(sessionInfo + "\n"))
 		if err != nil {
-			utils.Warning(fmt.Sprintf("Session list: %v", err))
+			utils.Error(fmt.Sprintf("Session list: %v", err))
 			return
 		}
 	}
@@ -109,14 +111,15 @@ func (manager *Manager) ExecCmdForAll(command string, output io.Writer) {
 func (manager *Manager) HandleAllSession(callback func(*Session)) {
 	limiter := make(chan struct{}, 100)
 	wg := sync.WaitGroup{}
-	for _, session := range manager.sessionManager {
+	copySessionManger := maps.Clone(manager.sessionManager)
+	for _, session := range copySessionManger {
 		limiter <- struct{}{}
 		wg.Add(1)
 
 		go func(sess *Session) {
 			defer func() {
 				if r := recover(); r != nil {
-					utils.Warning(fmt.Sprintf("Panic: %v", r))
+					utils.Error(fmt.Sprintf("Panic: %v", r))
 				}
 			}()
 			callback(sess)
@@ -153,10 +156,10 @@ func (manager *Manager) ListAllContext(output io.Writer) {
 		return
 	}
 	for i, context := range manager.contextManager {
-		contextInfo := fmt.Sprintf("id: %d\t", i) + context.ContextInfo()
+		contextInfo := fmt.Sprintf("id: %d\t", i) + fmt.Sprintf("managing session< %s >", context.ContextInfo())
 		_, err := output.Write([]byte(contextInfo + "\n"))
 		if err != nil {
-			utils.Warning(fmt.Sprintf("Context list: %v", err))
+			utils.Error(fmt.Sprintf("Context list: %v", err))
 			return
 		}
 	}

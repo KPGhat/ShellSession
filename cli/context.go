@@ -22,7 +22,7 @@ func enterContext(id int) error {
 	for {
 		blue := color.New(color.FgBlue).SprintFunc()
 		cyan := color.New(color.FgHiCyan).SprintFunc()
-		prompt := blue("context[") + cyan(context.GetAllContext()) + blue("]>")
+		prompt := blue("context[") + cyan("size:"+context.Size()) + blue("]>")
 		os.Stdout.Write([]byte(prompt))
 
 		reader := bufio.NewReader(os.Stdin)
@@ -32,10 +32,10 @@ func enterContext(id int) error {
 		if cmdSplit[0] == "add" || cmdSplit[0] == "del" {
 			operateContext(context, cmdSplit)
 		} else if cmdSplit[0] == "list" {
-			session.GetManager().ListAllSession(os.Stdout, true)
+			context.List(os.Stdout)
 		} else if cmdSplit[0] == "sh" {
 			if len(cmdSplit) < 2 {
-				utils.Warning("Session manage execute shell error.\nExample:\tsh cmd")
+				utils.Error("Session manage execute shell error.\nExample:\tsh cmd")
 				continue
 			}
 			context.HandleAllContext(func(session *session.Session) {
@@ -58,7 +58,7 @@ func enterContext(id int) error {
 
 func operateContext(context *session.Context, cmdSplit []string) {
 	if len(cmdSplit) < 2 {
-		utils.Warning(fmt.Sprintf("Session manage %s error.\nExample:\t%s id [id...]\n\t%s all\n", cmdSplit[0], cmdSplit[0], cmdSplit[0]))
+		utils.Error(fmt.Sprintf("Session manage %s error.\nExample:\t%s id [id...]\n\t%s all\n", cmdSplit[0], cmdSplit[0], cmdSplit[0]))
 		return
 	}
 
@@ -81,7 +81,7 @@ func operateContext(context *session.Context, cmdSplit []string) {
 		for _, idStr := range cmdSplit[1:] {
 			id, err := strconv.Atoi(idStr)
 			if err != nil {
-				utils.Warning("Session manage add error: id is a number")
+				utils.Error("Session manage add error: id is a number")
 				break
 			}
 			err = actionFunc(id)

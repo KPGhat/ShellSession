@@ -52,7 +52,7 @@ func dispatch(cmdSplit []string) cliType {
 
 func handleSession(args []string) {
 	if len(args) < 1 {
-		utils.Warning("Missing session args")
+		utils.Error("Missing session args")
 		return
 	}
 	sessionManager := session.GetManager()
@@ -73,7 +73,7 @@ func handleSession(args []string) {
 
 func handleContext(args []string) {
 	if len(args) < 1 {
-		utils.Warning("Missing context args")
+		utils.Error("Missing context args")
 		return
 	}
 
@@ -96,6 +96,11 @@ func handleClear(args []string) {
 	switch option {
 	case "-a":
 		session.GetManager().HandleAllSession(func(s *session.Session) {
+			if !s.IsAlive {
+				session.GetManager().DelSession(s.Id)
+				utils.Congrats("Clear not alive session <" + strconv.Itoa(s.Id) + ">")
+				return
+			}
 			randstr := utils.RandString(16)
 			result := string(s.ExecCmd("echo " + randstr))
 			result = strings.Trim(result, "\n\r")
@@ -117,13 +122,13 @@ func handleClear(args []string) {
 
 func handleInteract(args []string) {
 	if len(args) != 1 {
-		utils.Warning("Session interact error.\nExample:\tsession -i id")
+		utils.Error("Session interact error.\nExample:\tsession -i id")
 		return
 	}
 
 	sessionID, err := strconv.Atoi(args[0])
 	if err != nil {
-		utils.Warning("id is not a number")
+		utils.Error("id is not a number")
 		return
 	}
 
@@ -134,7 +139,7 @@ func handleInteract(args []string) {
 
 func handleLog(args []string) {
 	if len(args) != 1 {
-		utils.Warning("Missing log arg")
+		utils.Error("Missing log arg")
 		return
 	}
 
@@ -150,17 +155,17 @@ func handleLog(args []string) {
 
 func dispatchContext(args []string) {
 	if len(args) != 1 {
-		utils.Warning("Wrong context command format\nExample:\tcontext -i [id]")
+		utils.Error("Wrong context command format\nExample:\tcontext -i [id]")
 		return
 	}
 	id, err := strconv.Atoi(args[0])
 	if err != nil {
-		utils.Warning("Error enter context: id must be a int")
+		utils.Error("Error enter context: id must be a int")
 		return
 	}
 	err = enterContext(id)
 	if err != nil {
-		utils.Warning(fmt.Sprintf("Error enter context: %v", err))
+		utils.Error(fmt.Sprintf("Error enter context: %v", err))
 		return
 	}
 }

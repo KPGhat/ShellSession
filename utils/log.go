@@ -13,9 +13,16 @@ func Congrats(message string) {
 	}
 }
 
-func Warning(message string) {
+func Error(message string) {
 	if !cmd.Config.LogOff {
 		red := color.New(color.FgHiRed).SprintFunc()
 		fmt.Println("\r" + red("[-]") + message)
+	}
+}
+
+func Warning(message string) {
+	if !cmd.Config.LogOff {
+		yellow := color.New(color.FgHiYellow).SprintFunc()
+		fmt.Println("\r" + yellow("[*]") + message)
 	}
 }

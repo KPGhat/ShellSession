@@ -3,6 +3,9 @@ package session
 import (
 	"errors"
 	"fmt"
+	"github.com/KPGhat/ShellSession/utils"
+	"io"
+	"maps"
 	"strconv"
 	"strings"
 	"sync"
@@ -65,12 +68,16 @@ func (context *Context) Delete(id int) error {
 }
 
 func (context *Context) DeleteAll() {
+	var sessionToDel []int
 	for id, _ := range context.context {
+		sessionToDel = append(sessionToDel, id)
+	}
+	for _, id := range sessionToDel {
 		context.Delete(id)
 	}
 }
 
-func (context *Context) GetAllContext() string {
+func (context *Context) ContextInfo() string {
 	var result []string
 	for id, _ := range context.context {
 		result = append(result, strconv.Itoa(id))
@@ -78,12 +85,28 @@ func (context *Context) GetAllContext() string {
 	return strings.Join(result, ",")
 }
 
-func (context *Context) ContextInfo() string {
-	return fmt.Sprintf("managing session< %s >", context.GetAllContext())
+func (context *Context) Size() string {
+	return fmt.Sprintf("%d", len(context.context))
+}
+
+func (context *Context) List(output io.Writer) {
+	if len(context.context) == 0 {
+		utils.Error("[-]No context created")
+		return
+	}
+	for id, _ := range context.context {
+		sessionInfo := fmt.Sprintf("id: %d\t", id) + GetManager().GetSession(id).SessionInfo()
+		_, err := output.Write([]byte(sessionInfo + "\n"))
+		if err != nil {
+			utils.Error(fmt.Sprintf("Context list: %v", err))
+			return
+		}
+	}
 }
 
 func (context *Context) HandleAllContext(callback func(session *Session)) {
-	for id, _ := range context.context {
+	copyContext := maps.Clone(context.context)
+	for id, _ := range copyContext {
 		session := GetManager().GetSession(id)
 		if session != nil {
 			callback(session)

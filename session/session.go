@@ -27,7 +27,7 @@ func (session *Session) Send(data string) {
 
 	_, err := session.Conn.Write([]byte(data))
 	if err != nil {
-		utils.Warning(fmt.Sprintf("Send data to sessioin error: %v", err))
+		utils.Error(fmt.Sprintf("Send data to session error: %v", err))
 		session.IsAlive = false
 		return
 	}
@@ -54,7 +54,7 @@ func (session *Session) ReadUntil(suffix string) ([]byte, bool) {
 
 		if err != nil {
 			if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
-				//utils.Warning(fmt.Sprintf("Read data timeout: %v", err))
+				//utils.Error(fmt.Sprintf("Read data timeout: %v", err))
 				isTimeout = true
 			} else {
 				session.IsAlive = false
@@ -79,7 +79,7 @@ func (session *Session) ReadListener(running *bool, callback func([]byte)) {
 		data := make([]byte, 1024)
 		n, err := session.Read(data)
 		if err != nil {
-			utils.Warning(fmt.Sprintf("Read data to session error: %v", err))
+			utils.Error(fmt.Sprintf("Read data to session error: %v", err))
 			*running = false
 			session.IsAlive = false
 		}

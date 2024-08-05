@@ -42,7 +42,7 @@ func CliControl() {
 				utils.Congrats("Please enter exit again")
 			}
 		case NOTEXIST:
-			utils.Warning("gsh: " + cmdSplit[0] + ": no such command")
+			utils.Error("gsh: " + cmdSplit[0] + ": no such command")
 		}
 		lastExitStatue = cmdType == EXIT
 	}
